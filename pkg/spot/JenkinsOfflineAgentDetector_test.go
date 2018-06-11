@@ -70,7 +70,7 @@ func TestFindOfflineAgents_Query_NoResponse(t *testing.T) {
 	_, err := sut.FindOfflineAgents()
 
 	require.Error(t, err)
-	require.Regexp(t, `No connection could be made because the target machine actively refused it`, err.Error())
+	require.Regexp(t, `dial tcp.*refused`, err.Error())
 }
 
 func TestFindOfflineAgents_Query_NotJson(t *testing.T) {
