@@ -1,35 +1,42 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"bitbucket.hylandqa.net/do/spot/pkg/spot"
+
+	arg "github.com/alexflint/go-arg"
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/sirupsen/logrus"
 )
 
-type dummyDetector struct{ id int }
+type applicationArgs struct {
+	Jenkins   []string `arg:"-j,separate" help:"Jenkins Url & credentials in the form of https://jenkins/,username,password"`
+	Verbosity string   `arg:"-v" help:"Verbosity [panic, fatal, error, warn, info, debug]"`
+	Once      bool     `arg:"-o" help:"Run checks once and exit"`
+}
 
-func (d *dummyDetector) Name() string { return "[DummyDetector] http://dummy/" + strconv.Itoa(d.id) }
-func (d *dummyDetector) FindOfflineAgents() ([]string, error) {
-	if d.id == 2 {
-		return nil, fmt.Errorf("something's FUBAR")
-	}
-	return []string{"a", "b", "c"}, nil
+func (applicationArgs) Description() string {
+	return "alerts for disconnected build agents"
 }
 
 type dummyNotifier struct{}
 
 func (d *dummyNotifier) Notify(agents []string) error { return nil }
 
-func initLogrus() {
+func initLogrus(level string) {
 	log.SetFormatter(&log.TextFormatter{ForceColors: true})
 	log.SetOutput(colorable.NewColorableStdout())
+
+	if level, err := log.ParseLevel(strings.ToLower(level)); err != nil {
+		log.Panic(err)
+	} else {
+		log.SetLevel(level)
+	}
 }
 
 func watchAllTheThings(interval time.Duration, w *spot.Watchdog, shutdown chan bool) {
@@ -50,25 +57,52 @@ func watchAllTheThings(interval time.Duration, w *spot.Watchdog, shutdown chan b
 }
 
 func main() {
-	initLogrus()
+	args := &applicationArgs{}
+	args.Verbosity = "info"
+	arg.MustParse(args)
 
+	initLogrus(args.Verbosity)
 	log.Info("Hello, World!")
 
 	watchdog := &spot.Watchdog{
-		Detectors: []spot.OfflineAgentDetector{
-			&dummyDetector{id: 1},
-			&dummyDetector{id: 2},
-		},
+		Detectors:           []spot.OfflineAgentDetector{},
 		NotificationHandler: &dummyNotifier{},
 	}
 
-	shutdown := make(chan bool)
-	go watchAllTheThings(1*time.Second, watchdog, shutdown)
+	for _, v := range args.Jenkins {
+		l := log.WithField("jenkins", v)
+		l.Debug("Trying to parse jenkins instance")
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		if strings.Contains(v, ",") {
+			parts := strings.Split(v, ",")
+			if len(parts) != 3 {
+				l.Panicf("Expected url with credentials to have 3 parts but had %d", len(parts))
+			}
 
-	<-c
-	shutdown <- true
+			watchdog.Detectors = append(watchdog.Detectors, spot.NewJenkinsDetector(parts[0], parts[1], parts[2]))
+		} else {
+			watchdog.Detectors = append(watchdog.Detectors, spot.NewJenkinsDetector(v, "", ""))
+		}
+	}
+
+	if len(watchdog.Detectors) == 0 {
+		log.Panic("No detectors provided")
+	}
+
+	if args.Once {
+		if err := watchdog.RunChecks(); err != nil {
+			panic(err)
+		}
+	} else {
+		shutdown := make(chan bool)
+		go watchAllTheThings(10*time.Second, watchdog, shutdown)
+
+		c := make(chan os.Signal)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+		<-c
+		shutdown <- true
+	}
+
 	log.Info("Goodbye")
 }
