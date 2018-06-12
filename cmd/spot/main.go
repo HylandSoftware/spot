@@ -73,15 +73,10 @@ func main() {
 		l := log.WithField("jenkins", v)
 		l.Debug("Trying to parse jenkins instance")
 
-		if strings.Contains(v, ",") {
-			parts := strings.Split(v, ",")
-			if len(parts) != 3 {
-				l.Panicf("Expected url with credentials to have 3 parts but had %d", len(parts))
-			}
-
-			watchdog.Detectors = append(watchdog.Detectors, spot.NewJenkinsDetector(parts[0], parts[1], parts[2]))
+		if detector, err := spot.NewJenkinsDetectorFromArg(v); err != nil {
+			l.WithError(err).Panic("Failed to parse jenkins argument")
 		} else {
-			watchdog.Detectors = append(watchdog.Detectors, spot.NewJenkinsDetector(v, "", ""))
+			watchdog.Detectors = append(watchdog.Detectors, detector)
 		}
 	}
 

@@ -12,11 +12,17 @@ If you don't have `make`, you can build manually:
 ```bash
 # linux
 dep ensure
-go build -o dist/mmcmd -v ./cmd/mmcmd
+go build -o dist/spot -v ./cmd/spot
 
 # windows
 dep ensure
-go build -o dist/mmcmd.exe -v ./cmd/mmcmd
+go build -o dist/spot.exe -v ./cmd/spot
+```
+
+You can also build the docker container if you do not have `go` / `make` / `dep` installed:
+
+```bash
+docker build . -t spot
 ```
 
 ## Usage

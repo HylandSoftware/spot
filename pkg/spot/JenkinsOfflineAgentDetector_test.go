@@ -1,6 +1,7 @@
 package spot
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,36 @@ func mockJenkins(un, pw string) (*mockServer, *JenkinsOfflineAgentDetector) {
 			s.Close()
 		},
 	}, NewJenkinsDetector(s.URL, un, pw)
+}
+
+func TestNewJenkinsDetectorFromArg_ErrorForEmpty(t *testing.T) {
+	_, err := NewJenkinsDetectorFromArg("")
+
+	require.EqualError(t, err, "No arg specified")
+}
+
+func TestNewJenkinsDetectorFromArg_ErrorForMalformatted(t *testing.T) {
+	_, err := NewJenkinsDetectorFromArg("http://foo,bar,baz,fizz,buzz")
+
+	require.EqualError(t, err, fmt.Sprintf("The format of the config string was not recognized: %s", "http://foo,bar,baz,fizz,buzz"))
+}
+
+func TestNewJenkinsDetectorFromArg_NoCredentials(t *testing.T) {
+	sut, err := NewJenkinsDetectorFromArg("http://foo/")
+
+	require.NoError(t, err)
+	require.Equal(t, "http://foo", sut.APIEndpoint)
+	require.Empty(t, sut.Username)
+	require.Empty(t, sut.Password)
+}
+
+func TestNewJenkinsDetectorFromArg_WithCredentials(t *testing.T) {
+	sut, err := NewJenkinsDetectorFromArg("http://foo/,un,pw")
+
+	require.NoError(t, err)
+	require.Equal(t, "http://foo", sut.APIEndpoint)
+	require.Equal(t, "un", sut.Username)
+	require.Equal(t, "pw", sut.Password)
 }
 
 func TestName(t *testing.T) {

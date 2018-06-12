@@ -35,6 +35,32 @@ type JenkinsOfflineAgentDetector struct {
 	log *logrus.Entry
 }
 
+// NewJenkinsDetectorFromArg parses a configuration string into a
+// JenkinsOfflineAgentDetector. The format of the string is one of
+// the following:
+//
+// <url>: an http:// or https:// URL to a jenkins instance that does
+//        not require authentication
+//
+// <url>,<un>,<pw>: an http:// or https:// URL to a jenkins instance.
+//                  <un> and <pw> will be used to authenticate API
+//                  requests. <pw> may be a password or access token.
+func NewJenkinsDetectorFromArg(arg string) (*JenkinsOfflineAgentDetector, error) {
+	if arg == "" {
+		return nil, fmt.Errorf("No arg specified")
+	}
+
+	parts := strings.Split(arg, ",")
+	switch len(parts) {
+	case 1:
+		return NewJenkinsDetector(parts[0], "", ""), nil
+	case 3:
+		return NewJenkinsDetector(parts[0], parts[1], parts[2]), nil
+	default:
+		return nil, fmt.Errorf("The format of the config string was not recognized: %s", arg)
+	}
+}
+
 // NewJenkinsDetector constructs a JenkinsOfflineAgentDetector
 func NewJenkinsDetector(endpoint, un, pw string) *JenkinsOfflineAgentDetector {
 	if strings.HasSuffix(endpoint, "/") {
@@ -81,10 +107,15 @@ func (j *JenkinsOfflineAgentDetector) queryAPI() ([]node, error) {
 	return response.Computers, nil
 }
 
+// Name implements spot.OfflineAgentDetector.Name by returning
+// the name of the detector formatted as '[jenkins] {endpoint}'
 func (j *JenkinsOfflineAgentDetector) Name() string {
 	return fmt.Sprintf("[jenkins] %s", j.APIEndpoint)
 }
 
+// FindOfflineAgents implements spot.OfflineAgentDetector.FindOfflineAgents
+// by querying the jenkins computer API endpoint and returning any nodes
+// that have their Offline property set to true.
 func (j *JenkinsOfflineAgentDetector) FindOfflineAgents() ([]string, error) {
 	if j.api == nil {
 		return nil, fmt.Errorf("Use spot.NewJenkinsDetector(...) to construct a JenkinsOfflineAgentDetector")
