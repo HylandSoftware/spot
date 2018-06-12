@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -16,7 +17,9 @@ import (
 
 type applicationArgs struct {
 	Jenkins   []string `arg:"-j,separate" help:"Jenkins Url & credentials in the form of https://jenkins/,username,password"`
+	Slack     string   `arg:"-s" help:"Slack-Compatible Incoming Webhook URL"`
 	Verbosity string   `arg:"-v" help:"Verbosity [panic, fatal, error, warn, info, debug]"`
+	Period    string   `arg:"-p" help:"How long to wait between checks"`
 	Once      bool     `arg:"-o" help:"Run checks once and exit"`
 }
 
@@ -59,7 +62,7 @@ func watchAllTheThings(interval time.Duration, w *spot.Watchdog, shutdown chan b
 func main() {
 	args := &applicationArgs{}
 	args.Verbosity = "info"
-	arg.MustParse(args)
+	p := arg.MustParse(args)
 
 	initLogrus(args.Verbosity)
 	log.Info("Hello, World!")
@@ -69,19 +72,26 @@ func main() {
 		NotificationHandler: &dummyNotifier{},
 	}
 
+	if args.Slack != "" {
+		var err error
+		if watchdog.NotificationHandler, err = spot.NewSlackNotifier(args.Slack); err != nil {
+			p.Fail(fmt.Sprintf("Invalid slack URL: %s", err.Error()))
+		}
+	}
+
 	for _, v := range args.Jenkins {
 		l := log.WithField("jenkins", v)
 		l.Debug("Trying to parse jenkins instance")
 
 		if detector, err := spot.NewJenkinsDetectorFromArg(v); err != nil {
-			l.WithError(err).Panic("Failed to parse jenkins argument")
+			p.Fail(fmt.Sprintf("Failed to parse jenkins configuration: %s", err.Error()))
 		} else {
 			watchdog.Detectors = append(watchdog.Detectors, detector)
 		}
 	}
 
 	if len(watchdog.Detectors) == 0 {
-		log.Panic("No detectors provided")
+		p.Fail("Provide at least one watchdog configuration")
 	}
 
 	if args.Once {
@@ -89,8 +99,13 @@ func main() {
 			panic(err)
 		}
 	} else {
+		period, err := time.ParseDuration(args.Period)
+		if err != nil {
+			p.Fail(fmt.Sprintf("Failed to parse period: %s", err.Error()))
+		}
+
 		shutdown := make(chan bool)
-		go watchAllTheThings(10*time.Second, watchdog, shutdown)
+		go watchAllTheThings(period, watchdog, shutdown)
 
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)

@@ -10,17 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockServer struct {
+type mockJenkinsServer struct {
 	mux      *http.ServeMux
 	server   *httptest.Server
 	teardown func()
 }
 
-func mockJenkins(un, pw string) (*mockServer, *JenkinsOfflineAgentDetector) {
+func mockJenkins(un, pw string) (*mockJenkinsServer, *JenkinsOfflineAgentDetector) {
 	m := http.NewServeMux()
 	s := httptest.NewServer(m)
 
-	return &mockServer{
+	return &mockJenkinsServer{
 		mux:    m,
 		server: s,
 		teardown: func() {

@@ -121,8 +121,6 @@ func (j *JenkinsOfflineAgentDetector) FindOfflineAgents() ([]string, error) {
 		return nil, fmt.Errorf("Use spot.NewJenkinsDetector(...) to construct a JenkinsOfflineAgentDetector")
 	}
 
-	l := j.log.WithField("detector", j.Name())
-
 	offline := []string{}
 	nodes, err := j.queryAPI()
 	if err != nil {
@@ -130,18 +128,18 @@ func (j *JenkinsOfflineAgentDetector) FindOfflineAgents() ([]string, error) {
 	}
 
 	if len(nodes) == 0 {
-		l.Warn("No agents found")
+		j.log.Warn("No agents found")
 	}
 
 	for _, node := range nodes {
 		if node.Offline {
-			l.WithFields(logrus.Fields{
+			j.log.WithFields(logrus.Fields{
 				"agent":  node.DisplayName,
 				"reason": node.OfflineCauseReason,
 			}).Warn("Found an offline agent")
 			offline = append(offline, node.DisplayName)
 		} else {
-			l.WithField("agent", node.DisplayName).Debug("Node is online")
+			j.log.WithField("agent", node.DisplayName).Debug("Node is online")
 		}
 	}
 
