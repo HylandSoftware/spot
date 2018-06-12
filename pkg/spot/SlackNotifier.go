@@ -42,10 +42,13 @@ func NewSlackNotifier(endpoint string) (*SlackNotifier, error) {
 	}, nil
 }
 
-func buildMessage(agents []string) string {
+func buildMessage(agents map[string][]string) string {
 	agentSlug := ""
-	for _, v := range agents {
-		agentSlug += fmt.Sprintf("* %s\n", v)
+	for k, v := range agents {
+		agentSlug += fmt.Sprintf("* %s\n", k)
+		for _, a := range v {
+			agentSlug += fmt.Sprintf("    * %s\n", a)
+		}
 	}
 
 	return fmt.Sprintf(":warning: One or more build agents are offline! :warning:\n\n%s", strings.TrimSpace(agentSlug))
@@ -53,7 +56,7 @@ func buildMessage(agents []string) string {
 
 // Notify implements spot.Notifier.Notify by posting a message
 // to a slack-compatible webhook
-func (s *SlackNotifier) Notify(agents []string) error {
+func (s *SlackNotifier) Notify(agents map[string][]string) error {
 	if s.api == nil {
 		return fmt.Errorf("Use spot.NewSlackNotifier(...) to construct a SlackNotifier")
 	}

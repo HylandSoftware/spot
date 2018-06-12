@@ -13,8 +13,8 @@ type mockDetector struct {
 }
 
 func (d *mockDetector) Name() string {
-	d.Called()
-	return "[MockDetector]"
+	args := d.Called()
+	return fmt.Sprintf("[MockDetector] %s", args.String(0))
 }
 
 func (d *mockDetector) FindOfflineAgents() ([]string, error) {
@@ -30,7 +30,7 @@ func setup(agents []string, e error) (*mockDetector, *mockNotifier, *Watchdog) {
 	detector := &mockDetector{}
 	notifier := &mockNotifier{}
 
-	detector.On("Name").Once()
+	detector.On("Name").Return("a")
 	detector.On("FindOfflineAgents").Return(agents, e)
 
 	sut := &Watchdog{
@@ -41,7 +41,7 @@ func setup(agents []string, e error) (*mockDetector, *mockNotifier, *Watchdog) {
 	return detector, notifier, sut
 }
 
-func (n *mockNotifier) Notify(agents []string) error {
+func (n *mockNotifier) Notify(agents map[string][]string) error {
 	args := n.Called(agents)
 
 	if err := args.Error(0); err != nil {
@@ -58,7 +58,7 @@ func TestWatchdogRunChecks_NoAgents(t *testing.T) {
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
-	n.AssertNotCalled(t, "Notify", []string{})
+	n.AssertNotCalled(t, "Notify", map[string][]string{})
 }
 
 func TestWatchdogRunChecks_Error(t *testing.T) {
@@ -68,24 +68,25 @@ func TestWatchdogRunChecks_Error(t *testing.T) {
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
-	n.AssertNotCalled(t, "Notify", []string{})
+	n.AssertNotCalled(t, "Notify", map[string][]string{})
 }
 
 func TestWatchdogRunChecks_FoundAgents(t *testing.T) {
-	offline := []string{"foo", "bar"}
+	offline := []string{"b", "c"}
 
 	d, n, sut := setup(offline, nil)
-	n.On("Notify", offline).Return(nil)
+	d.On("Name").Return("a")
+	n.On("Notify", map[string][]string{"[MockDetector] a": []string{"b", "c"}}).Return(nil)
 
 	err := sut.RunChecks()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
-	n.AssertCalled(t, "Notify", offline)
+	n.AssertCalled(t, "Notify", map[string][]string{"[MockDetector] a": []string{"b", "c"}})
 }
 
 func TestWatchdogRunChecks_NilNotificationHandler(t *testing.T) {
-	offline := []string{"foo", "bar"}
+	offline := []string{"b", "c"}
 
 	d, _, sut := setup(offline, nil)
 	sut.NotificationHandler = nil
@@ -98,18 +99,21 @@ func TestWatchdogRunChecks_NilNotificationHandler(t *testing.T) {
 
 func TestWatchdogRunChecks_ConcatsAllOfflineForNotification(t *testing.T) {
 	d, n, sut := setup([]string{"foo", "bar"}, nil)
+	d.On("Name").Return("a")
 
 	d2 := &mockDetector{}
-	d2.On("Name").Once()
+	d2.On("Name").Return("d")
 	d2.On("FindOfflineAgents").Return([]string{"fizz", "buzz"}, nil)
 
 	sut.Detectors = append(sut.Detectors, d2)
 
-	n.On("Notify", []string{"foo", "bar", "fizz", "buzz"}).Return(nil)
+	expected := map[string][]string{"[MockDetector] a": []string{"foo", "bar"}, "[MockDetector] d": []string{"fizz", "buzz"}}
+
+	n.On("Notify", expected).Return(nil)
 
 	err := sut.RunChecks()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
-	n.AssertCalled(t, "Notify", []string{"foo", "bar", "fizz", "buzz"})
+	n.AssertCalled(t, "Notify", expected)
 }

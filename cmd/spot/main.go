@@ -29,7 +29,7 @@ func (applicationArgs) Description() string {
 
 type dummyNotifier struct{}
 
-func (d *dummyNotifier) Notify(agents []string) error { return nil }
+func (d *dummyNotifier) Notify(agents map[string][]string) error { return nil }
 
 func initLogrus(level string) {
 	log.SetFormatter(&log.TextFormatter{ForceColors: true})

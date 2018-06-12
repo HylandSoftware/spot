@@ -32,7 +32,7 @@ func mockSlack() (*mockSlackServer, *SlackNotifier) {
 func TestNotify_ErrorForNilClient(t *testing.T) {
 	sut := &SlackNotifier{}
 
-	err := sut.Notify([]string{"a", "b", "c"})
+	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
 
 	require.EqualError(t, err, "Use spot.NewSlackNotifier(...) to construct a SlackNotifier")
 }
@@ -46,7 +46,7 @@ func TestNotify_NoAgents(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	err := sut.Notify([]string{})
+	err := sut.Notify(map[string][]string{})
 
 	require.NoError(t, err)
 	require.False(t, called, "Expected no API calls to be made")
@@ -62,7 +62,7 @@ func TestNotify_HttpErrorFailure(t *testing.T) {
 	})
 
 	sut.Endpoint = "thisisnotaprotocol://foo"
-	err := sut.Notify([]string{"a", "b", "c"})
+	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
 
 	require.EqualError(t, err, "Post thisisnotaprotocol://foo: unsupported protocol scheme \"thisisnotaprotocol\"")
 	require.False(t, called, "Expected no API calls to be made")
@@ -77,7 +77,7 @@ func TestNotify_NonSuccessResponse(t *testing.T) {
 		w.WriteHeader(http.StatusBadRequest)
 	})
 
-	err := sut.Notify([]string{"a", "b", "c"})
+	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
 
 	require.EqualError(t, err, "Failed to notify: 400 Bad Request")
 	require.True(t, called, "Expected an API call to be made")
@@ -100,10 +100,10 @@ func TestNotify(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	err := sut.Notify([]string{"a", "b", "c"})
+	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
 
 	require.NoError(t, err)
 	require.NotNil(t, payload)
-	require.Equal(t, payload.Text, ":warning: One or more build agents are offline! :warning:\n\n* a\n* b\n* c")
-	require.Equal(t, payload.Username, "spot")
+	require.Equal(t, ":warning: One or more build agents are offline! :warning:\n\n* a\n    * b,c\n* d\n    * e\n    * f", payload.Text)
+	require.Equal(t, "spot", payload.Username)
 }

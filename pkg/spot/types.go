@@ -13,7 +13,7 @@ type Watchdog struct {
 // RunChecks polls all detectors. If any detector returns one or more offline
 // agent, the notification handler is called
 func (w *Watchdog) RunChecks() error {
-	toNotify := []string{}
+	toNotify := map[string][]string{}
 
 	log.Info("Running Watchdog Task")
 	for _, v := range w.Detectors {
@@ -25,7 +25,7 @@ func (w *Watchdog) RunChecks() error {
 			l.WithError(err).Error("Failed to check for offline agents")
 		} else if len(offline) > 0 {
 			l.WithField("offline", offline).Warn("One or more agents are offline")
-			toNotify = append(toNotify, offline...)
+			toNotify[v.Name()] = offline
 		}
 
 		l.Debug("Check Complete")
@@ -58,7 +58,7 @@ type OfflineAgentDetector interface {
 
 // Notifier provides a way to warn interested parties about offline agents.
 type Notifier interface {
-	// Notify takes an array of agents and sends a notification, optionally
-	// returning an error.
-	Notify(agents []string) error
+	// Notify takes an map of detector names to array of offline agents and
+	// sends a notification, optionally returning an error.
+	Notify(agents map[string][]string) error
 }
