@@ -1,4 +1,4 @@
-package spot
+package jenkins
 
 import (
 	"encoding/json"
@@ -25,7 +25,8 @@ type jenkinsResponse struct {
 }
 
 // JenkinsOfflineAgentDetector is an OfflineAgentDetector for watching
-// Jenkins agents. If a Username a
+// Jenkins agents. If a Username and password are provided, API requests
+// will use HTTP Basic authentication with the provided credentials.
 type JenkinsOfflineAgentDetector struct {
 	APIEndpoint string
 	Username    string

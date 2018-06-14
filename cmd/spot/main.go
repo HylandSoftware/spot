@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"bitbucket.hylandqa.net/do/spot/pkg/spot"
+	"bitbucket.hylandqa.net/do/spot/pkg/spot/bamboo"
+	"bitbucket.hylandqa.net/do/spot/pkg/spot/jenkins"
 
 	arg "github.com/alexflint/go-arg"
 	colorable "github.com/mattn/go-colorable"
@@ -16,6 +18,7 @@ import (
 )
 
 type applicationArgs struct {
+	Bamboo    []string `arg:"-b,separate" help:"Bamboo Url & credentials in the form of https://bamboo/,username,password"`
 	Jenkins   []string `arg:"-j,separate" help:"Jenkins Url & credentials in the form of https://jenkins/,username,password"`
 	Slack     string   `arg:"-s" help:"Slack-Compatible Incoming Webhook URL"`
 	Verbosity string   `arg:"-v" help:"Verbosity [panic, fatal, error, warn, info, debug]"`
@@ -59,6 +62,32 @@ func watchAllTheThings(interval time.Duration, w *spot.Watchdog, shutdown chan b
 	}
 }
 
+func (a *applicationArgs) populateBamboo(w *spot.Watchdog, p *arg.Parser) {
+	for _, v := range a.Bamboo {
+		l := log.WithField("bamboo", v)
+		l.Debug("Trying to parse bamboo instance")
+
+		if detector, err := bamboo.NewBambooDetectorFromArg(v); err != nil {
+			p.Fail(fmt.Sprintf("Failed to parse bamboo configuration: %s", err.Error()))
+		} else {
+			w.Detectors = append(w.Detectors, detector)
+		}
+	}
+}
+
+func (a *applicationArgs) populateJenkins(w *spot.Watchdog, p *arg.Parser) {
+	for _, v := range a.Jenkins {
+		l := log.WithField("jenkins", v)
+		l.Debug("Trying to parse jenkins instance")
+
+		if detector, err := jenkins.NewJenkinsDetectorFromArg(v); err != nil {
+			p.Fail(fmt.Sprintf("Failed to parse jenkins configuration: %s", err.Error()))
+		} else {
+			w.Detectors = append(w.Detectors, detector)
+		}
+	}
+}
+
 func main() {
 	args := &applicationArgs{}
 	args.Verbosity = "info"
@@ -79,16 +108,8 @@ func main() {
 		}
 	}
 
-	for _, v := range args.Jenkins {
-		l := log.WithField("jenkins", v)
-		l.Debug("Trying to parse jenkins instance")
-
-		if detector, err := spot.NewJenkinsDetectorFromArg(v); err != nil {
-			p.Fail(fmt.Sprintf("Failed to parse jenkins configuration: %s", err.Error()))
-		} else {
-			watchdog.Detectors = append(watchdog.Detectors, detector)
-		}
-	}
+	args.populateBamboo(watchdog, p)
+	args.populateJenkins(watchdog, p)
 
 	if len(watchdog.Detectors) == 0 {
 		p.Fail("Provide at least one watchdog configuration")
