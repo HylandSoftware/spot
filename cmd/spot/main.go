@@ -62,7 +62,9 @@ func watchAllTheThings(interval time.Duration, w *spot.Watchdog, shutdown chan b
 	}
 }
 
-func (a *applicationArgs) populateBamboo(w *spot.Watchdog, p *arg.Parser) {
+func (a *applicationArgs) populateBamboo(p *arg.Parser) []spot.OfflineAgentDetector {
+	result := []spot.OfflineAgentDetector{}
+
 	for _, v := range a.Bamboo {
 		l := log.WithField("bamboo", v)
 		l.Debug("Trying to parse bamboo instance")
@@ -70,12 +72,16 @@ func (a *applicationArgs) populateBamboo(w *spot.Watchdog, p *arg.Parser) {
 		if detector, err := bamboo.NewBambooDetectorFromArg(v); err != nil {
 			p.Fail(fmt.Sprintf("Failed to parse bamboo configuration: %s", err.Error()))
 		} else {
-			w.Detectors = append(w.Detectors, detector)
+			result = append(result, spot.OfflineAgentDetector(detector))
 		}
 	}
+
+	return result
 }
 
-func (a *applicationArgs) populateJenkins(w *spot.Watchdog, p *arg.Parser) {
+func (a *applicationArgs) populateJenkins(p *arg.Parser) []spot.OfflineAgentDetector {
+	result := []spot.OfflineAgentDetector{}
+
 	for _, v := range a.Jenkins {
 		l := log.WithField("jenkins", v)
 		l.Debug("Trying to parse jenkins instance")
@@ -83,9 +89,11 @@ func (a *applicationArgs) populateJenkins(w *spot.Watchdog, p *arg.Parser) {
 		if detector, err := jenkins.NewJenkinsDetectorFromArg(v); err != nil {
 			p.Fail(fmt.Sprintf("Failed to parse jenkins configuration: %s", err.Error()))
 		} else {
-			w.Detectors = append(w.Detectors, detector)
+			result = append(result, spot.OfflineAgentDetector(detector))
 		}
 	}
+
+	return result
 }
 
 func main() {
@@ -96,24 +104,27 @@ func main() {
 	initLogrus(args.Verbosity)
 	log.Info("Hello, World!")
 
-	watchdog := &spot.Watchdog{
-		Detectors:           []spot.OfflineAgentDetector{},
-		NotificationHandler: &dummyNotifier{},
-	}
+	detectors := []spot.OfflineAgentDetector{}
+	var handler spot.Notifier = &dummyNotifier{}
 
 	if args.Slack != "" {
 		var err error
-		if watchdog.NotificationHandler, err = spot.NewSlackNotifier(args.Slack); err != nil {
+		if handler, err = spot.NewSlackNotifier(args.Slack); err != nil {
 			p.Fail(fmt.Sprintf("Invalid slack URL: %s", err.Error()))
 		}
 	}
 
-	args.populateBamboo(watchdog, p)
-	args.populateJenkins(watchdog, p)
+	bambooDetectors := args.populateBamboo(p)
+	detectors = append(detectors, bambooDetectors...)
 
-	if len(watchdog.Detectors) == 0 {
+	jenkinsDetectors := args.populateJenkins(p)
+	detectors = append(detectors, jenkinsDetectors...)
+
+	if len(detectors) == 0 {
 		p.Fail("Provide at least one watchdog configuration")
 	}
+
+	watchdog := spot.NewWatchdog(detectors, handler)
 
 	if args.Once {
 		if err := watchdog.RunChecks(); err != nil {

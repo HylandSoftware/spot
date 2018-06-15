@@ -33,10 +33,7 @@ func setup(agents []string, e error) (*mockDetector, *mockNotifier, *Watchdog) {
 	detector.On("Name").Return("a")
 	detector.On("FindOfflineAgents").Return(agents, e)
 
-	sut := &Watchdog{
-		Detectors:           []OfflineAgentDetector{detector},
-		NotificationHandler: notifier,
-	}
+	sut := NewWatchdog([]OfflineAgentDetector{detector}, notifier)
 
 	return detector, notifier, sut
 }
@@ -116,4 +113,66 @@ func TestWatchdogRunChecks_ConcatsAllOfflineForNotification(t *testing.T) {
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
 	n.AssertCalled(t, "Notify", expected)
+}
+
+func TestCacheUpdate_NoSystems(t *testing.T) {
+	sut := OfflineAgentCache{}
+
+	result := sut.Update(map[string][]string{})
+
+	require.Empty(t, result)
+}
+
+func TestCacheUpdate_MarksNewSystems(t *testing.T) {
+	sut := OfflineAgentCache{}
+
+	result := sut.Update(map[string][]string{
+		"a": []string{"b", "c"},
+		"d": []string{"e", "f"},
+	})
+
+	require.Contains(t, result, "a")
+	require.Contains(t, result["a"], "b")
+	require.Contains(t, result["a"], "c")
+
+	require.Contains(t, result, "d")
+	require.Contains(t, result["d"], "e")
+	require.Contains(t, result["d"], "f")
+}
+
+func TestCacheUpdate_AddsToExistingSystem(t *testing.T) {
+	sut := OfflineAgentCache{}
+
+	sut.Update(map[string][]string{"a": []string{"b", "c"}})
+	result := sut.Update(map[string][]string{"a": []string{"b", "c", "d"}})
+
+	require.Contains(t, result, "a")
+	require.Contains(t, result["a"], "b")
+	require.Contains(t, result["a"], "c")
+	require.Contains(t, result["a"], "d")
+}
+
+func TestCacheUpdate_RemovesNoLongerOfflineAgents(t *testing.T) {
+	sut := OfflineAgentCache{}
+
+	sut.Update(map[string][]string{"a": []string{"b", "c"}})
+	result := sut.Update(map[string][]string{"a": []string{"c", "d"}})
+
+	require.Contains(t, result, "a")
+	require.NotContains(t, result["a"], "b")
+	require.Contains(t, result["a"], "c")
+	require.Contains(t, result["a"], "d")
+}
+
+func TestCacheUpdate_RemovesNoLongerOfflineSystems(t *testing.T) {
+	sut := OfflineAgentCache{}
+
+	sut.Update(map[string][]string{"a": []string{"b", "c"}, "e": []string{"f"}})
+	result := sut.Update(map[string][]string{"a": []string{"c", "d"}})
+
+	require.NotContains(t, result, "e")
+	require.Contains(t, result, "a")
+	require.NotContains(t, result["a"], "b")
+	require.Contains(t, result["a"], "c")
+	require.Contains(t, result["a"], "d")
 }

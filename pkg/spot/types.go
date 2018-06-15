@@ -8,12 +8,24 @@ import (
 type Watchdog struct {
 	Detectors           []OfflineAgentDetector
 	NotificationHandler Notifier
+
+	cache OfflineAgentCache
+}
+
+// NewWatchdog constructs a Watchdog
+func NewWatchdog(detectors []OfflineAgentDetector, handler Notifier) *Watchdog {
+	return &Watchdog{
+		Detectors:           detectors,
+		NotificationHandler: handler,
+
+		cache: OfflineAgentCache{},
+	}
 }
 
 // RunChecks polls all detectors. If any detector returns one or more offline
 // agent, the notification handler is called
 func (w *Watchdog) RunChecks() error {
-	toNotify := map[string][]string{}
+	found := map[string][]string{}
 
 	log.Info("Running Watchdog Task")
 	for _, v := range w.Detectors {
@@ -25,11 +37,13 @@ func (w *Watchdog) RunChecks() error {
 			l.WithError(err).Error("Failed to check for offline agents")
 		} else if len(offline) > 0 {
 			l.WithField("offline", offline).Warn("One or more agents are offline")
-			toNotify[v.Name()] = offline
+			found[v.Name()] = offline
 		}
 
 		l.Debug("Check Complete")
 	}
+
+	toNotify := w.cache.Update(found)
 
 	if len(toNotify) > 0 {
 		if w.NotificationHandler == nil {
@@ -41,6 +55,7 @@ func (w *Watchdog) RunChecks() error {
 		return w.NotificationHandler.Notify(toNotify)
 	}
 
+	log.Info("No newly offline agents")
 	return nil
 }
 
@@ -54,6 +69,52 @@ type OfflineAgentDetector interface {
 
 	/// FindOfflineAgents returns a string array of agents that are offline.
 	FindOfflineAgents() ([]string, error)
+}
+
+// OfflineAgentCache remembers what agents are still offline
+type OfflineAgentCache map[string]map[string]bool
+
+// Update updates the cache and returns a map of systems to agents that are newly offline
+func (c OfflineAgentCache) Update(offline map[string][]string) map[string][]string {
+	result := map[string][]string{}
+
+	for system, agents := range offline {
+		// 1. Make entries for new systems
+		if _, exists := c[system]; !exists {
+			c[system] = map[string]bool{}
+		}
+
+		// 2. Make entries for new agents
+		for _, agent := range agents {
+			result[system] = append(result[system], agent)
+			if _, exists := c[system][agent]; !exists {
+				c[system][agent] = true
+			}
+		}
+
+		// 3. Remove agents not in the offline list
+		for agent := range c[system] {
+			found := false
+			for _, a := range offline[system] {
+				if agent == a {
+					found = true
+				}
+			}
+
+			if !found {
+				delete(c[system], agent)
+			}
+		}
+	}
+
+	// 4. Remove systems with no agents
+	for system := range c {
+		if _, exists := offline[system]; !exists || len(c[system]) == 0 {
+			delete(c, system)
+		}
+	}
+
+	return result
 }
 
 // Notifier provides a way to warn interested parties about offline agents.
