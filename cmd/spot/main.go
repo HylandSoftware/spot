@@ -24,6 +24,7 @@ type applicationArgs struct {
 	Verbosity string   `arg:"-v" help:"Verbosity [panic, fatal, error, warn, info, debug]"`
 	Period    string   `arg:"-p" help:"How long to wait between checks"`
 	Once      bool     `arg:"-o" help:"Run checks once and exit"`
+	WarmUp    bool     `arg:"-w" help:"Run checks without notifications once before starting the watchdog"`
 }
 
 func (applicationArgs) Description() string {
@@ -45,19 +46,34 @@ func initLogrus(level string) {
 	}
 }
 
-func watchAllTheThings(interval time.Duration, w *spot.Watchdog, shutdown chan bool) {
+func waitOne(sig chan bool, delay time.Duration) bool {
+	select {
+	case <-sig:
+		return false
+	case <-time.After(delay):
+		return true
+	}
+}
+
+func watchAllTheThings(warmUp bool, interval time.Duration, w *spot.Watchdog, shutdown chan bool) {
+	if warmUp {
+		log.Info("Warming the offline cache")
+		w.RunChecks()
+
+		if !waitOne(shutdown, interval) {
+			return
+		}
+	}
+
 	for {
 		// do the thing
-		if err := w.RunChecks(); err != nil {
+		if err := w.RunChecksAndNotify(); err != nil {
 			log.WithError(err).Error("Watchdog checks failed")
 		}
 
 		// wait for next interval
-		select {
-		case <-shutdown:
+		if !waitOne(shutdown, interval) {
 			return
-		case <-time.After(interval):
-			break
 		}
 	}
 }
@@ -137,7 +153,7 @@ func main() {
 		}
 
 		shutdown := make(chan bool)
-		go watchAllTheThings(period, watchdog, shutdown)
+		go watchAllTheThings(args.WarmUp, period, watchdog, shutdown)
 
 		c := make(chan os.Signal)
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM)

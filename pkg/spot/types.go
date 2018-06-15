@@ -23,8 +23,8 @@ func NewWatchdog(detectors []OfflineAgentDetector, handler Notifier) *Watchdog {
 }
 
 // RunChecks polls all detectors. If any detector returns one or more offline
-// agent, the notification handler is called
-func (w *Watchdog) RunChecks() error {
+// agent, they are added to the map that is returned
+func (w *Watchdog) RunChecks() map[string][]string {
 	found := map[string][]string{}
 
 	log.Info("Running Watchdog Task")
@@ -43,7 +43,13 @@ func (w *Watchdog) RunChecks() error {
 		l.Debug("Check Complete")
 	}
 
-	toNotify := w.cache.Update(found)
+	return w.cache.Update(found)
+}
+
+// RunChecksAndNotify calls w.RunChecks. If Any offline agents are returned
+// a notification is sent
+func (w *Watchdog) RunChecksAndNotify() error {
+	toNotify := w.RunChecks()
 
 	if len(toNotify) > 0 {
 		if w.NotificationHandler == nil {
@@ -86,9 +92,9 @@ func (c OfflineAgentCache) Update(offline map[string][]string) map[string][]stri
 
 		// 2. Make entries for new agents
 		for _, agent := range agents {
-			result[system] = append(result[system], agent)
 			if _, exists := c[system][agent]; !exists {
 				c[system][agent] = true
+				result[system] = append(result[system], agent)
 			}
 		}
 

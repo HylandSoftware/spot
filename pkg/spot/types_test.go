@@ -48,53 +48,66 @@ func (n *mockNotifier) Notify(agents map[string][]string) error {
 	return nil
 }
 
-func TestWatchdogRunChecks_NoAgents(t *testing.T) {
+func TestWatchdogRunChecksAndNotify_NoAgents(t *testing.T) {
 	d, n, sut := setup([]string{}, nil)
 
-	err := sut.RunChecks()
+	err := sut.RunChecksAndNotify()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
 	n.AssertNotCalled(t, "Notify", map[string][]string{})
 }
 
-func TestWatchdogRunChecks_Error(t *testing.T) {
+func TestWatchdogRunChecksAndNotify_Error(t *testing.T) {
 	d, n, sut := setup(nil, fmt.Errorf("Mock Error"))
 
-	err := sut.RunChecks()
+	err := sut.RunChecksAndNotify()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
 	n.AssertNotCalled(t, "Notify", map[string][]string{})
 }
 
-func TestWatchdogRunChecks_FoundAgents(t *testing.T) {
+func TestWatchdogRunChecksAndNotify_FoundAgents(t *testing.T) {
 	offline := []string{"b", "c"}
 
 	d, n, sut := setup(offline, nil)
 	d.On("Name").Return("a")
 	n.On("Notify", map[string][]string{"[MockDetector] a": []string{"b", "c"}}).Return(nil)
 
-	err := sut.RunChecks()
+	err := sut.RunChecksAndNotify()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
 	n.AssertCalled(t, "Notify", map[string][]string{"[MockDetector] a": []string{"b", "c"}})
 }
 
-func TestWatchdogRunChecks_NilNotificationHandler(t *testing.T) {
+func TestWatchdogRunChecks_DoesNotCallNotificationHandler(t *testing.T) {
+	offline := []string{"b", "c"}
+
+	d, n, sut := setup(offline, nil)
+	d.On("Name").Return("a")
+
+	result := sut.RunChecks()
+
+	require.Equal(t, result, map[string][]string{"[MockDetector] a": []string{"b", "c"}})
+	d.AssertCalled(t, "FindOfflineAgents")
+	n.AssertNotCalled(t, "Notify", mock.AnythingOfType("map[string][]string"))
+}
+
+func TestWatchdogRunChecksAndNotify_NilNotificationHandler(t *testing.T) {
 	offline := []string{"b", "c"}
 
 	d, _, sut := setup(offline, nil)
 	sut.NotificationHandler = nil
 
-	err := sut.RunChecks()
+	err := sut.RunChecksAndNotify()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
 }
 
-func TestWatchdogRunChecks_ConcatsAllOfflineForNotification(t *testing.T) {
+func TestWatchdogRunChecksAndNotify_ConcatsAllOfflineForNotification(t *testing.T) {
 	d, n, sut := setup([]string{"foo", "bar"}, nil)
 	d.On("Name").Return("a")
 
@@ -108,7 +121,7 @@ func TestWatchdogRunChecks_ConcatsAllOfflineForNotification(t *testing.T) {
 
 	n.On("Notify", expected).Return(nil)
 
-	err := sut.RunChecks()
+	err := sut.RunChecksAndNotify()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
@@ -140,6 +153,15 @@ func TestCacheUpdate_MarksNewSystems(t *testing.T) {
 	require.Contains(t, result["d"], "f")
 }
 
+func TestCacheUpdate_SilentForDuplicate(t *testing.T) {
+	sut := OfflineAgentCache{}
+
+	sut.Update(map[string][]string{"a": []string{"b"}})
+	result := sut.Update(map[string][]string{"a": []string{"b"}})
+
+	require.Empty(t, result)
+}
+
 func TestCacheUpdate_AddsToExistingSystem(t *testing.T) {
 	sut := OfflineAgentCache{}
 
@@ -147,8 +169,6 @@ func TestCacheUpdate_AddsToExistingSystem(t *testing.T) {
 	result := sut.Update(map[string][]string{"a": []string{"b", "c", "d"}})
 
 	require.Contains(t, result, "a")
-	require.Contains(t, result["a"], "b")
-	require.Contains(t, result["a"], "c")
 	require.Contains(t, result["a"], "d")
 }
 
@@ -160,7 +180,6 @@ func TestCacheUpdate_RemovesNoLongerOfflineAgents(t *testing.T) {
 
 	require.Contains(t, result, "a")
 	require.NotContains(t, result["a"], "b")
-	require.Contains(t, result["a"], "c")
 	require.Contains(t, result["a"], "d")
 }
 
@@ -173,6 +192,5 @@ func TestCacheUpdate_RemovesNoLongerOfflineSystems(t *testing.T) {
 	require.NotContains(t, result, "e")
 	require.Contains(t, result, "a")
 	require.NotContains(t, result["a"], "b")
-	require.Contains(t, result["a"], "c")
 	require.Contains(t, result["a"], "d")
 }
