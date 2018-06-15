@@ -46,33 +46,49 @@ func initLogrus(level string) {
 	}
 }
 
-func waitOne(sig chan bool, delay time.Duration) bool {
+func waitOne(sig <-chan bool, delay <-chan time.Time) bool {
 	select {
 	case <-sig:
 		return false
-	case <-time.After(delay):
+	case <-delay:
 		return true
 	}
 }
 
-func watchAllTheThings(warmUp bool, interval time.Duration, w *spot.Watchdog, shutdown chan bool) {
+func watchAllTheThings(warmUp bool, interval time.Duration, w *spot.Watchdog, shutdown <-chan bool) {
+	done := make(chan time.Time)
+
 	if warmUp {
 		log.Info("Warming the offline cache")
-		w.RunChecks()
+		go func() {
+			w.RunChecks()
+			done <- time.Now()
+		}()
 
-		if !waitOne(shutdown, interval) {
+		if !waitOne(shutdown, done) {
+			return
+		}
+
+		if !waitOne(shutdown, time.After(interval)) {
 			return
 		}
 	}
 
 	for {
 		// do the thing
-		if err := w.RunChecksAndNotify(); err != nil {
-			log.WithError(err).Error("Watchdog checks failed")
+		go func() {
+			if err := w.RunChecksAndNotify(); err != nil {
+				log.WithError(err).Error("Watchdog checks failed")
+			}
+			done <- time.Now()
+		}()
+
+		if !waitOne(shutdown, done) {
+			return
 		}
 
 		// wait for next interval
-		if !waitOne(shutdown, interval) {
+		if !waitOne(shutdown, time.After(interval)) {
 			return
 		}
 	}
