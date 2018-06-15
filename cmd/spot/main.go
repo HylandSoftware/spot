@@ -159,7 +159,7 @@ func main() {
 	watchdog := spot.NewWatchdog(detectors, handler)
 
 	if args.Once {
-		if err := watchdog.RunChecks(); err != nil {
+		if err := watchdog.RunChecksAndNotify(); err != nil {
 			panic(err)
 		}
 	} else {
