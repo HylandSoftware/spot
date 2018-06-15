@@ -1,5 +1,7 @@
 # Spot - The Watchdog for your Build Agents
 
+![spot](./logo.png)
+
 Spot is a watchdog for build agents in Jenkins and Bamboo
 
 ## Building
@@ -71,3 +73,10 @@ DEBU[0001] Node is online                                agent=Windows-Server-17
 DEBU[0001] Check Complete                                detector="[jenkins] https://csp.jenkins.hylandqa.net"
 INFO[0001] Goodbye
 ```
+
+## License
+
+TBD
+
+[Dog](https://thenounproject.com/term/dog/61386/) logo by `Buena Buena` from
+the Noun Project, licensed under the Creative Commons CCBY License.
