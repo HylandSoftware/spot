@@ -31,7 +31,7 @@ docker build . -t spot
 
 ```txt
 alerts for disconnected build agents
-Usage: main.exe [--bamboo BAMBOO] [--jenkins JENKINS] [--slack SLACK] [--verbosity VERBOSITY] [--period PERIOD] [--once]
+Usage: spot.exe [--bamboo BAMBOO] [--jenkins JENKINS] [--slack SLACK] [--verbosity VERBOSITY] [--period PERIOD] [--once]
 
 Options:
   --bamboo BAMBOO, -b BAMBOO
