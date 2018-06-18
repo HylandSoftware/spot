@@ -21,6 +21,7 @@ type applicationArgs struct {
 	Bamboo    []string `arg:"-b,separate" help:"Bamboo Url & credentials in the form of https://bamboo/,username,password"`
 	Jenkins   []string `arg:"-j,separate" help:"Jenkins Url & credentials in the form of https://jenkins/,username,password"`
 	Slack     string   `arg:"-s" help:"Slack-Compatible Incoming Webhook URL"`
+	Template  string   `arg:"-t" help:"Path to template for notifications"`
 	Verbosity string   `arg:"-v" help:"Verbosity [panic, fatal, error, warn, info, debug]"`
 	Period    string   `arg:"-p" help:"How long to wait between checks"`
 	Once      bool     `arg:"-o" help:"Run checks once and exit"`
@@ -141,7 +142,7 @@ func main() {
 
 	if args.Slack != "" {
 		var err error
-		if handler, err = spot.NewSlackNotifier(args.Slack); err != nil {
+		if handler, err = spot.NewSlackNotifier(args.Slack, args.Template); err != nil {
 			p.Fail(fmt.Sprintf("Invalid slack URL: %s", err.Error()))
 		}
 	}
