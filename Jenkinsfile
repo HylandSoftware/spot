@@ -60,11 +60,11 @@ pipeline {
                 helm version
 
                 helm upgrade spot ./deployments/helm/spot/ --install \
-                --namespace spot \
-                --set "watch.jenkins={${WATCH_JENKINS}}" \
-                --set "watch.bamboo={${WATCH_BAMBOO}}" \
-                --set "notify.slack=${WEBHOOK}" \
-                --wait
+                    --namespace spot \
+                    --set "watch.jenkins={${WATCH_JENKINS}}" \
+                    --set "watch.bamboo={${WATCH_BAMBOO}}" \
+                    --set "notify.slack=${WEBHOOK}" \
+                    --wait
                 '''
             }
         }

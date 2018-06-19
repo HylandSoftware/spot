@@ -1,4 +1,4 @@
-Spot is now deployed. It will watch
+Spot is now deployed. Every {{ .Values.watch.period }}, it will watch
 
 {{ if .Values.watch.jenkins }}
 The following jenkins instances:
