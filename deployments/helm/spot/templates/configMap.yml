@@ -1,0 +1,13 @@
+{{ if .Values.notify.template }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "spot.fullname" . }}
+  labels:
+    app: {{ template "spot.fullname" . }}
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+data:
+  message.tpl: {{ .Values.notify.template | quote }}
+{{ end }}

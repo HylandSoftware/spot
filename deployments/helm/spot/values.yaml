@@ -1,0 +1,33 @@
+# Default values for spot.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+## Overrides for generated resource names
+# See templates/_helpers.tpl
+nameOverride: ""
+fullnameOverride: ""
+
+verbosity: ""
+
+image:
+  name: "hcr.io/nlowe/spot"
+  tag: "latest"
+  pullPolicy: "Always"
+
+spec:
+  nodeSelector:
+    beta.kubernetes.io/os: "linux"
+
+watch:
+  jenkins: []
+  bamboo: []
+  period: "5m"
+  warmUp: true
+
+notify:
+  slack: ""
+  template: ""
+
+limits:
+  cpu: "200m"
+  memory: "256Mi"

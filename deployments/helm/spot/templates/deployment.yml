@@ -1,0 +1,73 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "spot.fullname" . }}
+  labels:
+    app: {{ template "spot.fullname" . }}
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      component: "{{ .Release.Name }}-watcher"
+  template:
+    metadata:
+      labels:
+        app: {{ template "spot.fullname" . }}
+        heritage: {{ .Release.Service | quote }}
+        release: {{ .Release.Name | quote }}
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        component: "{{ .Release.Name }}-watcher"
+    spec:
+      {{- if .Values.spec.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.spec.nodeSelector | indent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ template "spot.fullname" . }}
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+          - --period
+          - {{ .Values.watch.period | quote }}
+          {{- if .Values.watch.warmUp }}
+          - --warmup
+          {{- end }}
+          {{- range .Values.watch.jenkins }}
+          - --jenkins
+          - {{ . | quote }}
+          {{- end }}
+          {{- range .Values.watch.bamboo }}
+          - --bamboo
+          - {{ . | quote }}
+          {{- end }}
+          {{- if .Values.notify.slack }}
+          - --slack
+          - {{ .Values.notify.slack | quote }}
+          {{- end }}
+          {{- if .Values.notify.template }}
+          - --template
+          - /etc/spot/message.tpl
+          {{- end }}
+          - --verbosity
+          - {{ .Values.verbosity | default "info" | quote }}
+          ports:
+            - containerPort: 8080
+              name: handler
+          resources:
+            requests:
+              cpu: "{{ .Values.limits.cpu }}"
+              memory: "{{ .Values.limits.memory }}"
+      {{- if .Values.notify.template }}
+          volumeMounts:
+            - mountPath: /etc/spot
+              name: message-template
+      volumes:
+        - name: message-template
+          configMap:
+            name: {{ template "spot.fullname" . }}
+      {{- end }}

@@ -1,0 +1,21 @@
+Spot is now deployed. It will watch
+
+{{ if .Values.watch.jenkins }}
+The following jenkins instances:
+
+{{- range .Values.watch.jenkins }}
+  * {{ $v := . | split "," }}{{ $v._0 }}
+{{- end }}
+{{- end }}
+
+{{ if .Values.watch.bamboo }}
+The following bamboo instances:
+
+{{- range .Values.watch.bamboo }}
+  * {{ $v := . | split "," }}{{ $v._0 }}
+{{- end }}
+{{- end }}
+
+{{ if .Values.notify.slack }}
+Alerts will be posted to {{ .Values.notify.slack }}
+{{- end }}
