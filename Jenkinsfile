@@ -1,23 +1,51 @@
 pipeline {
-    agent { label 'linux && docker' }
+    agent {
+        kubernetes {
+            label 'spot-build'
+            yaml """
+            apiVersion: v1
+            kind: Pod
+            metadata:
+            labels:
+            spec:
+              containers:
+                - name: jnlp
+                  image: hcr.io/jenkins/jnlp-slave:alpine
+                - name: helm-kubectl
+                  image: dtzar/helm-kubectl
+                  command:
+                    - cat
+                  tty: true
+                - name: docker
+                  image: docker
+                  command:
+                    - cat
+                  tty: true
+                  volumeMounts:
+                    - mountPath: /var/run/docker.sock
+                      name: docker-sock
+              volumes:
+                - name: docker-sock
+                  hostPath:
+                    path: /var/run/docker.sock
+                    type: File
+            """
+        }
+    }
     stages {
         stage ("Check Helm Chart") {
-            agent {
-                docker {
-                    image 'dtzar/helm-kubectl'
-                    label 'linux && docker'
-                    reuseNode true
-                }
-            }
-
             steps {
-                sh 'helm lint --strict deployments/helm/spot'
+                container("helm-kubectl") {
+                    sh 'helm lint --strict deployments/helm/spot'
+                }
             }
         }
 
         stage ("Build Image") {
             steps {
-                sh 'docker build . -t hcr.io/nlowe/spot'
+                container("docker") {
+                    sh 'docker build . -t hcr.io/nlowe/spot'
+                }
             }
         }
 
@@ -26,20 +54,15 @@ pipeline {
                 branch 'master'
             }
             steps {
-                withDockerRegistry([credentialsId: 'hcr-tfsbuild', url: 'https://hcr.io']) {
-                    sh 'docker push hcr.io/nlowe/spot'
+                container("docker") {
+                    withDockerRegistry([credentialsId: 'hcr-tfsbuild', url: 'https://hcr.io']) {
+                        sh 'docker push hcr.io/nlowe/spot'
+                    }
                 }
             }
         }
 
         stage ("Deploy") {
-            agent {
-                docker {
-                    image 'dtzar/helm-kubectl'
-                    label 'linux && docker'
-                    reuseNode true
-                }
-            }
 
             environment {
                 KUBECONFIG = credentials('devops-kubeconfig')
@@ -53,19 +76,21 @@ pipeline {
             }
 
             steps {
-                sh '''
-                export HOME=$PWD
+                container("helm-kubectl") {
+                    sh '''
+                    export HOME=$PWD
 
-                kubectl version
-                helm version
+                    kubectl version
+                    helm version
 
-                helm upgrade spot ./deployments/helm/spot/ --install \
-                    --namespace spot \
-                    --set "watch.jenkins={${WATCH_JENKINS}}" \
-                    --set "watch.bamboo={${WATCH_BAMBOO}}" \
-                    --set "notify.slack=${WEBHOOK}" \
-                    --wait
-                '''
+                    helm upgrade spot ./deployments/helm/spot/ --install \
+                        --namespace spot \
+                        --set "watch.jenkins={${WATCH_JENKINS}}" \
+                        --set "watch.bamboo={${WATCH_BAMBOO}}" \
+                        --set "notify.slack=${WEBHOOK}" \
+                        --wait
+                    '''
+                }
             }
         }
     }
