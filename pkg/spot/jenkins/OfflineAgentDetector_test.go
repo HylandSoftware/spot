@@ -16,7 +16,7 @@ type mockJenkinsServer struct {
 	teardown func()
 }
 
-func mockJenkins(un, pw string) (*mockJenkinsServer, *JenkinsOfflineAgentDetector) {
+func mockJenkins(un, pw string) (*mockJenkinsServer, *OfflineAgentDetector) {
 	m := http.NewServeMux()
 	s := httptest.NewServer(m)
 
@@ -26,23 +26,23 @@ func mockJenkins(un, pw string) (*mockJenkinsServer, *JenkinsOfflineAgentDetecto
 		teardown: func() {
 			s.Close()
 		},
-	}, NewJenkinsDetector(s.URL, un, pw)
+	}, NewDetector(s.URL, un, pw)
 }
 
 func TestNewJenkinsDetectorFromArg_ErrorForEmpty(t *testing.T) {
-	_, err := NewJenkinsDetectorFromArg("")
+	_, err := NewDetectorFromArg("")
 
 	require.EqualError(t, err, "No arg specified")
 }
 
 func TestNewJenkinsDetectorFromArg_ErrorForMalformatted(t *testing.T) {
-	_, err := NewJenkinsDetectorFromArg("http://foo,bar,baz,fizz,buzz")
+	_, err := NewDetectorFromArg("http://foo,bar,baz,fizz,buzz")
 
 	require.EqualError(t, err, fmt.Sprintf("The format of the config string was not recognized: %s", "http://foo,bar,baz,fizz,buzz"))
 }
 
 func TestNewJenkinsDetectorFromArg_NoCredentials(t *testing.T) {
-	sut, err := NewJenkinsDetectorFromArg("http://foo/")
+	sut, err := NewDetectorFromArg("http://foo/")
 
 	require.NoError(t, err)
 	require.Equal(t, "http://foo", sut.APIEndpoint)
@@ -51,7 +51,7 @@ func TestNewJenkinsDetectorFromArg_NoCredentials(t *testing.T) {
 }
 
 func TestNewJenkinsDetectorFromArg_WithCredentials(t *testing.T) {
-	sut, err := NewJenkinsDetectorFromArg("http://foo/,un,pw")
+	sut, err := NewDetectorFromArg("http://foo/,un,pw")
 
 	require.NoError(t, err)
 	require.Equal(t, "http://foo", sut.APIEndpoint)
@@ -60,13 +60,13 @@ func TestNewJenkinsDetectorFromArg_WithCredentials(t *testing.T) {
 }
 
 func TestName(t *testing.T) {
-	sut := NewJenkinsDetector("http://foo/bar/", "fizz", "buzz")
+	sut := NewDetector("http://foo/bar/", "fizz", "buzz")
 
 	require.Equal(t, "[jenkins] http://foo/bar", sut.Name())
 }
 
 func TestFindOfflineAgents_ErrorForNilClient(t *testing.T) {
-	sut := &JenkinsOfflineAgentDetector{}
+	sut := &OfflineAgentDetector{}
 
 	_, err := sut.FindOfflineAgents()
 
@@ -74,7 +74,7 @@ func TestFindOfflineAgents_ErrorForNilClient(t *testing.T) {
 }
 
 func TestFindOfflineAgents_Query_BadEndpoint(t *testing.T) {
-	sut := NewJenkinsDetector("://foo", "fizz", "buzz")
+	sut := NewDetector("://foo", "fizz", "buzz")
 
 	_, err := sut.FindOfflineAgents()
 

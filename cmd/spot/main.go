@@ -102,7 +102,7 @@ func (a *applicationArgs) populateBamboo(p *arg.Parser) []spot.OfflineAgentDetec
 		l := log.WithField("bamboo", v)
 		l.Debug("Trying to parse bamboo instance")
 
-		if detector, err := bamboo.NewBambooDetectorFromArg(v); err != nil {
+		if detector, err := bamboo.NewDetectorFromArg(v); err != nil {
 			p.Fail(fmt.Sprintf("Failed to parse bamboo configuration: %s", err.Error()))
 		} else {
 			result = append(result, spot.OfflineAgentDetector(detector))
@@ -119,7 +119,7 @@ func (a *applicationArgs) populateJenkins(p *arg.Parser) []spot.OfflineAgentDete
 		l := log.WithField("jenkins", v)
 		l.Debug("Trying to parse jenkins instance")
 
-		if detector, err := jenkins.NewJenkinsDetectorFromArg(v); err != nil {
+		if detector, err := jenkins.NewDetectorFromArg(v); err != nil {
 			p.Fail(fmt.Sprintf("Failed to parse jenkins configuration: %s", err.Error()))
 		} else {
 			result = append(result, spot.OfflineAgentDetector(detector))
