@@ -215,3 +215,44 @@ func TestFindOfflineAgents_ExcludesNonWhitelistedClasses(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, result, "agent1")
 }
+
+func TestFindOfflineAgents_CustomWhitelistedClasses(t *testing.T) {
+	jenkins, sut := mockJenkins("fizz", "buzz")
+	defer jenkins.teardown()
+
+	jenkins.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, `
+			{
+				"_class":"hudson.model.ComputerSet",
+				"computer":[
+					{
+						"_class":"hudson.model.Hudson$MasterComputer",
+						"displayName":"master",
+						"offline":false,
+						"offlineCauseReason":""
+					},
+					{
+						"_class":"hudson.slaves.KubernetesSlave",
+						"displayName":"agent1",
+						"offline":true,
+						"offlineCauseReason":"removing pod"
+					},
+					{
+						"_class":"hudson.slaves.SlaveComputer",
+						"displayName":"agent2",
+						"offline":true,
+						"offlineCauseReason":"testing"
+					}
+				]
+			}
+		`)
+	})
+
+	UseClassWhitelist([]string{"hudson.slaves.KubernetesSlave"})
+	result, err := sut.FindOfflineAgents()
+
+	require.NoError(t, err)
+	require.Contains(t, result, "agent1")
+	require.NotContains(t, result, "agent2")
+}

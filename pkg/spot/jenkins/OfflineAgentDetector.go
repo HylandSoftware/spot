@@ -14,7 +14,7 @@ const (
 )
 
 var (
-	classWhitelist = [...]string{
+	classWhitelist = []string{
 		"hudson.slaves.SlaveComputer",
 	}
 )
@@ -40,6 +40,12 @@ type OfflineAgentDetector struct {
 
 	api *http.Client
 	log *logrus.Entry
+}
+
+// UseClassWhitelist sets the class whitelist to filter offline agents by.
+func UseClassWhitelist(whitelist []string) {
+	logrus.WithField("whitelist", whitelist).Warning("The default class whitelist has been overridden")
+	classWhitelist = whitelist
 }
 
 // NewDetectorFromArg parses a configuration string into a

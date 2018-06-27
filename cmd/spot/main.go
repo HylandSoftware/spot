@@ -26,6 +26,8 @@ type applicationArgs struct {
 	Period    string   `arg:"-p" help:"How long to wait between checks"`
 	Once      bool     `arg:"-o" help:"Run checks once and exit"`
 	WarmUp    bool     `arg:"-w" help:"Run checks without notifications once before starting the watchdog"`
+
+	JenkinsClassWhitelist []string `arg:"-c,separate" help:"Only consider jenkins agents with the specified class(es)"`
 }
 
 func (applicationArgs) Description() string {
@@ -132,10 +134,15 @@ func (a *applicationArgs) populateJenkins(p *arg.Parser) []spot.OfflineAgentDete
 func main() {
 	args := &applicationArgs{}
 	args.Verbosity = "info"
+
 	p := arg.MustParse(args)
 
 	initLogrus(args.Verbosity)
 	log.Info("Hello, World!")
+
+	if len(args.JenkinsClassWhitelist) > 0 {
+		jenkins.UseClassWhitelist(args.JenkinsClassWhitelist)
+	}
 
 	detectors := []spot.OfflineAgentDetector{}
 	var handler spot.Notifier = &dummyNotifier{}
