@@ -13,6 +13,12 @@ const (
 	nodeAPICall = "computer/api/json?tree=computer[displayName,offline,offlineCauseReason]"
 )
 
+var (
+	classWhitelist = [...]string{
+		"hudson.slaves.SlaveComputer",
+	}
+)
+
 type node struct {
 	Class              string `json:"_class"`
 	DisplayName        string `json:"displayName"`
@@ -133,7 +139,20 @@ func (j *JenkinsOfflineAgentDetector) FindOfflineAgents() ([]string, error) {
 	}
 
 	for _, node := range nodes {
-		if node.Offline {
+		whitelisted := false
+		for _, class := range classWhitelist {
+			if node.Class == class {
+				whitelisted = true
+				break
+			}
+		}
+
+		if !whitelisted {
+			j.log.WithFields(logrus.Fields{
+				"agent": node.DisplayName,
+				"class": node.Class,
+			}).Debug("Skipping agent (class not whitelisted)")
+		} else if node.Offline {
 			j.log.WithFields(logrus.Fields{
 				"agent":  node.DisplayName,
 				"reason": node.OfflineCauseReason,
