@@ -13,6 +13,12 @@ const (
 	nodeAPICall = "computer/api/json?tree=computer[displayName,offline,offlineCauseReason]"
 )
 
+var (
+	classWhitelist = []string{
+		"hudson.slaves.SlaveComputer",
+	}
+)
+
 type node struct {
 	Class              string `json:"_class"`
 	DisplayName        string `json:"displayName"`
@@ -24,10 +30,10 @@ type jenkinsResponse struct {
 	Computers []node `json:"computer"`
 }
 
-// JenkinsOfflineAgentDetector is an OfflineAgentDetector for watching
+// OfflineAgentDetector is a spot.OfflineAgentDetector for watching
 // Jenkins agents. If a Username and password are provided, API requests
 // will use HTTP Basic authentication with the provided credentials.
-type JenkinsOfflineAgentDetector struct {
+type OfflineAgentDetector struct {
 	APIEndpoint string
 	Username    string
 	Password    string
@@ -36,7 +42,13 @@ type JenkinsOfflineAgentDetector struct {
 	log *logrus.Entry
 }
 
-// NewJenkinsDetectorFromArg parses a configuration string into a
+// UseClassWhitelist sets the class whitelist to filter offline agents by.
+func UseClassWhitelist(whitelist []string) {
+	logrus.WithField("whitelist", whitelist).Warning("The default class whitelist has been overridden")
+	classWhitelist = whitelist
+}
+
+// NewDetectorFromArg parses a configuration string into a
 // JenkinsOfflineAgentDetector. The format of the string is one of
 // the following:
 //
@@ -46,7 +58,7 @@ type JenkinsOfflineAgentDetector struct {
 // <url>,<un>,<pw>: an http:// or https:// URL to a jenkins instance.
 //                  <un> and <pw> will be used to authenticate API
 //                  requests. <pw> may be a password or access token.
-func NewJenkinsDetectorFromArg(arg string) (*JenkinsOfflineAgentDetector, error) {
+func NewDetectorFromArg(arg string) (*OfflineAgentDetector, error) {
 	if arg == "" {
 		return nil, fmt.Errorf("No arg specified")
 	}
@@ -54,21 +66,21 @@ func NewJenkinsDetectorFromArg(arg string) (*JenkinsOfflineAgentDetector, error)
 	parts := strings.Split(arg, ",")
 	switch len(parts) {
 	case 1:
-		return NewJenkinsDetector(parts[0], "", ""), nil
+		return NewDetector(parts[0], "", ""), nil
 	case 3:
-		return NewJenkinsDetector(parts[0], parts[1], parts[2]), nil
+		return NewDetector(parts[0], parts[1], parts[2]), nil
 	default:
 		return nil, fmt.Errorf("The format of the config string was not recognized: %s", arg)
 	}
 }
 
-// NewJenkinsDetector constructs a JenkinsOfflineAgentDetector
-func NewJenkinsDetector(endpoint, un, pw string) *JenkinsOfflineAgentDetector {
+// NewDetector constructs an OfflineAgentDetector
+func NewDetector(endpoint, un, pw string) *OfflineAgentDetector {
 	if strings.HasSuffix(endpoint, "/") {
 		endpoint = strings.TrimSuffix(endpoint, "/")
 	}
 
-	result := &JenkinsOfflineAgentDetector{
+	result := &OfflineAgentDetector{
 		APIEndpoint: endpoint,
 		Username:    un,
 		Password:    pw,
@@ -80,7 +92,7 @@ func NewJenkinsDetector(endpoint, un, pw string) *JenkinsOfflineAgentDetector {
 	return result
 }
 
-func (j *JenkinsOfflineAgentDetector) queryAPI() ([]node, error) {
+func (j *OfflineAgentDetector) queryAPI() ([]node, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", j.APIEndpoint, nodeAPICall), nil)
 	if err != nil {
 		return nil, err
@@ -110,14 +122,14 @@ func (j *JenkinsOfflineAgentDetector) queryAPI() ([]node, error) {
 
 // Name implements spot.OfflineAgentDetector.Name by returning
 // the name of the detector formatted as '[jenkins] {endpoint}'
-func (j *JenkinsOfflineAgentDetector) Name() string {
+func (j *OfflineAgentDetector) Name() string {
 	return fmt.Sprintf("[jenkins] %s", j.APIEndpoint)
 }
 
 // FindOfflineAgents implements spot.OfflineAgentDetector.FindOfflineAgents
 // by querying the jenkins computer API endpoint and returning any nodes
 // that have their Offline property set to true.
-func (j *JenkinsOfflineAgentDetector) FindOfflineAgents() ([]string, error) {
+func (j *OfflineAgentDetector) FindOfflineAgents() ([]string, error) {
 	if j.api == nil {
 		return nil, fmt.Errorf("Use spot.NewJenkinsDetector(...) to construct a JenkinsOfflineAgentDetector")
 	}
@@ -133,7 +145,20 @@ func (j *JenkinsOfflineAgentDetector) FindOfflineAgents() ([]string, error) {
 	}
 
 	for _, node := range nodes {
-		if node.Offline {
+		whitelisted := false
+		for _, class := range classWhitelist {
+			if node.Class == class {
+				whitelisted = true
+				break
+			}
+		}
+
+		if !whitelisted {
+			j.log.WithFields(logrus.Fields{
+				"agent": node.DisplayName,
+				"class": node.Class,
+			}).Debug("Skipping agent (class not whitelisted)")
+		} else if node.Offline {
 			j.log.WithFields(logrus.Fields{
 				"agent":  node.DisplayName,
 				"reason": node.OfflineCauseReason,

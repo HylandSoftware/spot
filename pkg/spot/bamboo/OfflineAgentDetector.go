@@ -22,10 +22,10 @@ type bambooAgent struct {
 	Busy    bool
 }
 
-// BambooOfflineAgentDetector is an OfflineAgentDetector for watching
+// OfflineAgentDetector is a spot.OfflineAgentDetector for watching
 // Bamboo agents. If a Username and password are provided, API requests
 // will use HTTP Basic authentication with the provided credentials.
-type BambooOfflineAgentDetector struct {
+type OfflineAgentDetector struct {
 	APIEndpoint string
 	Username    string
 	Password    string
@@ -34,7 +34,7 @@ type BambooOfflineAgentDetector struct {
 	log *logrus.Entry
 }
 
-// NewBambooDetectorFromArg parses a configuration string into a
+// NewDetectorFromArg parses a configuration string into a
 // BambooOfflineAgentDetector. The format of the string is one of
 // the following:
 //
@@ -44,7 +44,7 @@ type BambooOfflineAgentDetector struct {
 // <url>,<un>,<pw>: an http:// or https:// URL to a bamboo instance.
 //                  <un> and <pw> will be used to authenticate API
 //                  requests. <pw> may be a password or access token.
-func NewBambooDetectorFromArg(arg string) (*BambooOfflineAgentDetector, error) {
+func NewDetectorFromArg(arg string) (*OfflineAgentDetector, error) {
 	if arg == "" {
 		return nil, fmt.Errorf("No arg specified")
 	}
@@ -52,21 +52,21 @@ func NewBambooDetectorFromArg(arg string) (*BambooOfflineAgentDetector, error) {
 	parts := strings.Split(arg, ",")
 	switch len(parts) {
 	case 1:
-		return NewBambooDetector(parts[0], "", ""), nil
+		return NewDetector(parts[0], "", ""), nil
 	case 3:
-		return NewBambooDetector(parts[0], parts[1], parts[2]), nil
+		return NewDetector(parts[0], parts[1], parts[2]), nil
 	default:
 		return nil, fmt.Errorf("The format of the config string was not recognized: %s", arg)
 	}
 }
 
-// NewBambooDetector constructs a BambooOfflineAgentDetector
-func NewBambooDetector(endpoint, un, pw string) *BambooOfflineAgentDetector {
+// NewDetector constructs a BambooOfflineAgentDetector
+func NewDetector(endpoint, un, pw string) *OfflineAgentDetector {
 	if strings.HasSuffix(endpoint, "/") {
 		endpoint = strings.TrimSuffix(endpoint, "/")
 	}
 
-	result := &BambooOfflineAgentDetector{
+	result := &OfflineAgentDetector{
 		APIEndpoint: endpoint,
 		Username:    un,
 		Password:    pw,
@@ -78,7 +78,7 @@ func NewBambooDetector(endpoint, un, pw string) *BambooOfflineAgentDetector {
 	return result
 }
 
-func (b *BambooOfflineAgentDetector) queryAPI() ([]bambooAgent, error) {
+func (b *OfflineAgentDetector) queryAPI() ([]bambooAgent, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s", b.APIEndpoint, bambooAgentAPICall), nil)
 	if err != nil {
 		return nil, err
@@ -109,14 +109,14 @@ func (b *BambooOfflineAgentDetector) queryAPI() ([]bambooAgent, error) {
 
 // Name implements spot.OfflineAgentDetector.Name by returning
 // the name of the detector formatted as '[bamboo] {endpoint}'
-func (b *BambooOfflineAgentDetector) Name() string {
+func (b *OfflineAgentDetector) Name() string {
 	return fmt.Sprintf("[bamboo] %s", b.APIEndpoint)
 }
 
 // FindOfflineAgents implements spot.OfflineAgentDetector.FindOfflineAgents
 // by querying the bamboo agent API endpoint and returning any agents
 // that have their Active property set to true.
-func (b *BambooOfflineAgentDetector) FindOfflineAgents() ([]string, error) {
+func (b *OfflineAgentDetector) FindOfflineAgents() ([]string, error) {
 	if b.api == nil {
 		return nil, fmt.Errorf("Use spot.NewBambooDetector(...) to construct a BambooOfflineAgentDetector")
 	}

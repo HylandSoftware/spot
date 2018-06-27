@@ -26,6 +26,8 @@ type applicationArgs struct {
 	Period    string   `arg:"-p" help:"How long to wait between checks"`
 	Once      bool     `arg:"-o" help:"Run checks once and exit"`
 	WarmUp    bool     `arg:"-w" help:"Run checks without notifications once before starting the watchdog"`
+
+	JenkinsClassWhitelist []string `arg:"-c,separate" help:"Only consider jenkins agents with the specified class(es)"`
 }
 
 func (applicationArgs) Description() string {
@@ -102,7 +104,7 @@ func (a *applicationArgs) populateBamboo(p *arg.Parser) []spot.OfflineAgentDetec
 		l := log.WithField("bamboo", v)
 		l.Debug("Trying to parse bamboo instance")
 
-		if detector, err := bamboo.NewBambooDetectorFromArg(v); err != nil {
+		if detector, err := bamboo.NewDetectorFromArg(v); err != nil {
 			p.Fail(fmt.Sprintf("Failed to parse bamboo configuration: %s", err.Error()))
 		} else {
 			result = append(result, spot.OfflineAgentDetector(detector))
@@ -119,7 +121,7 @@ func (a *applicationArgs) populateJenkins(p *arg.Parser) []spot.OfflineAgentDete
 		l := log.WithField("jenkins", v)
 		l.Debug("Trying to parse jenkins instance")
 
-		if detector, err := jenkins.NewJenkinsDetectorFromArg(v); err != nil {
+		if detector, err := jenkins.NewDetectorFromArg(v); err != nil {
 			p.Fail(fmt.Sprintf("Failed to parse jenkins configuration: %s", err.Error()))
 		} else {
 			result = append(result, spot.OfflineAgentDetector(detector))
@@ -132,10 +134,15 @@ func (a *applicationArgs) populateJenkins(p *arg.Parser) []spot.OfflineAgentDete
 func main() {
 	args := &applicationArgs{}
 	args.Verbosity = "info"
+
 	p := arg.MustParse(args)
 
 	initLogrus(args.Verbosity)
 	log.Info("Hello, World!")
+
+	if len(args.JenkinsClassWhitelist) > 0 {
+		jenkins.UseClassWhitelist(args.JenkinsClassWhitelist)
+	}
 
 	detectors := []spot.OfflineAgentDetector{}
 	var handler spot.Notifier = &dummyNotifier{}
