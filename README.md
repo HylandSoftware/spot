@@ -31,7 +31,7 @@ docker build . -t spot
 
 ```txt
 alerts for disconnected build agents
-Usage: spot.exe [--bamboo BAMBOO] [--jenkins JENKINS] [--slack SLACK] [--verbosity VERBOSITY] [--period PERIOD] [--once]
+Usage: main.exe [--bamboo BAMBOO] [--jenkins JENKINS] [--slack SLACK] [--template TEMPLATE] [--verbosity VERBOSITY] [--period PERIOD] [--once] [--warmup] [--jenkinsclasswhitelist JENKINSCLASSWHITELIST]
 
 Options:
   --bamboo BAMBOO, -b BAMBOO
@@ -40,11 +40,16 @@ Options:
                          Jenkins Url & credentials in the form of https://jenkins/,username,password
   --slack SLACK, -s SLACK
                          Slack-Compatible Incoming Webhook URL
+  --template TEMPLATE, -t TEMPLATE
+                         Path to template for notifications
   --verbosity VERBOSITY, -v VERBOSITY
                          Verbosity [panic, fatal, error, warn, info, debug] [default: info]
   --period PERIOD, -p PERIOD
                          How long to wait between checks
   --once, -o             Run checks once and exit
+  --warmup, -w           Run checks without notifications once before starting the watchdog
+  --jenkinsclasswhitelist JENKINSCLASSWHITELIST, -c JENKINSCLASSWHITELIST
+                         Only consider jenkins agents with the specified class(es)
   --help, -h             display this help and exit
 ```
 
