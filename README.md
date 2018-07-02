@@ -81,7 +81,7 @@ INFO[0001] Goodbye
 
 ## License
 
-TBD
+Spot is licensed under the MIT License. See [`LICENSE`](./LICENSE) for details.
 
 [Dog](https://thenounproject.com/term/dog/61386/) logo by `Buena Buena` from
 the Noun Project, licensed under the Creative Commons CCBY License.
