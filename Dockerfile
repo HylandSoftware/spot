@@ -1,4 +1,4 @@
-FROM golang AS builder
+FROM golang:1.10 AS builder
 
 ADD . /go/src/github.com/hylandsoftware/spot
 WORKDIR /go/src/github.com/hylandsoftware/spot
