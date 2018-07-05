@@ -9,6 +9,5 @@ RUN make restore && \
 
 FROM alpine
 COPY --from=builder /go/src/bitbucket.hylandqa.net/do/spot/dist/spot /spot
-RUN apk add --no-cache --upgrade curl ca-certificates bash && \
-    curl -fksSL https://qa-admins.gitlab.hylandqa.net/ca-certificates-hyland/install.sh | bash
+
 ENTRYPOINT ["/spot"]
