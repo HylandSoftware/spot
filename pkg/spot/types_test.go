@@ -41,11 +41,7 @@ func setup(agents []string, e error) (*mockDetector, *mockNotifier, *Watchdog) {
 func (n *mockNotifier) Notify(agents map[string][]string) error {
 	args := n.Called(agents)
 
-	if err := args.Error(0); err != nil {
-		return err
-	}
-
-	return nil
+	return args.Error(0)
 }
 
 func TestWatchdogRunChecksAndNotify_NoAgents(t *testing.T) {
@@ -73,13 +69,13 @@ func TestWatchdogRunChecksAndNotify_FoundAgents(t *testing.T) {
 
 	d, n, sut := setup(offline, nil)
 	d.On("Name").Return("a")
-	n.On("Notify", map[string][]string{"[MockDetector] a": []string{"b", "c"}}).Return(nil)
+	n.On("Notify", map[string][]string{"[MockDetector] a": {"b", "c"}}).Return(nil)
 
 	err := sut.RunChecksAndNotify()
 
 	require.Nil(t, err)
 	d.AssertCalled(t, "FindOfflineAgents")
-	n.AssertCalled(t, "Notify", map[string][]string{"[MockDetector] a": []string{"b", "c"}})
+	n.AssertCalled(t, "Notify", map[string][]string{"[MockDetector] a": {"b", "c"}})
 }
 
 func TestWatchdogRunChecks_DoesNotCallNotificationHandler(t *testing.T) {
@@ -90,7 +86,7 @@ func TestWatchdogRunChecks_DoesNotCallNotificationHandler(t *testing.T) {
 
 	result := sut.RunChecks()
 
-	require.Equal(t, result, map[string][]string{"[MockDetector] a": []string{"b", "c"}})
+	require.Equal(t, result, map[string][]string{"[MockDetector] a": {"b", "c"}})
 	d.AssertCalled(t, "FindOfflineAgents")
 	n.AssertNotCalled(t, "Notify", mock.AnythingOfType("map[string][]string"))
 }
@@ -117,7 +113,7 @@ func TestWatchdogRunChecksAndNotify_ConcatsAllOfflineForNotification(t *testing.
 
 	sut.Detectors = append(sut.Detectors, d2)
 
-	expected := map[string][]string{"[MockDetector] a": []string{"foo", "bar"}, "[MockDetector] d": []string{"fizz", "buzz"}}
+	expected := map[string][]string{"[MockDetector] a": {"foo", "bar"}, "[MockDetector] d": {"fizz", "buzz"}}
 
 	n.On("Notify", expected).Return(nil)
 
@@ -140,8 +136,8 @@ func TestCacheUpdate_MarksNewSystems(t *testing.T) {
 	sut := OfflineAgentCache{}
 
 	result := sut.Update(map[string][]string{
-		"a": []string{"b", "c"},
-		"d": []string{"e", "f"},
+		"a": {"b", "c"},
+		"d": {"e", "f"},
 	})
 
 	require.Contains(t, result, "a")
@@ -156,8 +152,8 @@ func TestCacheUpdate_MarksNewSystems(t *testing.T) {
 func TestCacheUpdate_SilentForDuplicate(t *testing.T) {
 	sut := OfflineAgentCache{}
 
-	sut.Update(map[string][]string{"a": []string{"b"}})
-	result := sut.Update(map[string][]string{"a": []string{"b"}})
+	sut.Update(map[string][]string{"a": {"b"}})
+	result := sut.Update(map[string][]string{"a": {"b"}})
 
 	require.Empty(t, result)
 }
@@ -165,8 +161,8 @@ func TestCacheUpdate_SilentForDuplicate(t *testing.T) {
 func TestCacheUpdate_AddsToExistingSystem(t *testing.T) {
 	sut := OfflineAgentCache{}
 
-	sut.Update(map[string][]string{"a": []string{"b", "c"}})
-	result := sut.Update(map[string][]string{"a": []string{"b", "c", "d"}})
+	sut.Update(map[string][]string{"a": {"b", "c"}})
+	result := sut.Update(map[string][]string{"a": {"b", "c", "d"}})
 
 	require.Contains(t, result, "a")
 	require.Contains(t, result["a"], "d")
@@ -175,8 +171,8 @@ func TestCacheUpdate_AddsToExistingSystem(t *testing.T) {
 func TestCacheUpdate_RemovesNoLongerOfflineAgents(t *testing.T) {
 	sut := OfflineAgentCache{}
 
-	sut.Update(map[string][]string{"a": []string{"b", "c"}})
-	result := sut.Update(map[string][]string{"a": []string{"c", "d"}})
+	sut.Update(map[string][]string{"a": {"b", "c"}})
+	result := sut.Update(map[string][]string{"a": {"c", "d"}})
 
 	require.Contains(t, result, "a")
 	require.NotContains(t, result["a"], "b")
@@ -186,8 +182,8 @@ func TestCacheUpdate_RemovesNoLongerOfflineAgents(t *testing.T) {
 func TestCacheUpdate_RemovesNoLongerOfflineSystems(t *testing.T) {
 	sut := OfflineAgentCache{}
 
-	sut.Update(map[string][]string{"a": []string{"b", "c"}, "e": []string{"f"}})
-	result := sut.Update(map[string][]string{"a": []string{"c", "d"}})
+	sut.Update(map[string][]string{"a": {"b", "c"}, "e": {"f"}})
+	result := sut.Update(map[string][]string{"a": {"c", "d"}})
 
 	require.NotContains(t, result, "e")
 	require.Contains(t, result, "a")

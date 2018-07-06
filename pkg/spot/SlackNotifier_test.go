@@ -37,7 +37,7 @@ func TestNew_UsesDefaultTemplate(t *testing.T) {
 	sut, _ := NewSlackNotifier("http://endpoint", "")
 	buff := &bytes.Buffer{}
 
-	err := sut.messageTemplate.Execute(buff, map[string][]string{"a": []string{"b", "c"}})
+	err := sut.messageTemplate.Execute(buff, map[string][]string{"a": {"b", "c"}})
 
 	require.NoError(t, err)
 	require.Equal(t, ":warning: One or more build agents are offline! :warning:\n* a\n    * b\n    * c", buff.String())
@@ -57,8 +57,9 @@ func TestNew_CanUseCustomTemplate(t *testing.T) {
 	sut, err := NewSlackNotifier("http://endpoint", tpl.Name())
 	require.NoError(t, err)
 
-	err = sut.messageTemplate.Execute(buff, map[string][]string{"a": []string{"b", "c"}})
+	err = sut.messageTemplate.Execute(buff, map[string][]string{"a": {"b", "c"}})
 
+	require.NoError(t, err)
 	require.Equal(t, "foo", buff.String())
 }
 
@@ -107,7 +108,7 @@ func TestNew_StripsTrailingSlash(t *testing.T) {
 func TestNotify_ErrorForNilClient(t *testing.T) {
 	sut := &SlackNotifier{}
 
-	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
+	err := sut.Notify(map[string][]string{"a": {"b,c"}, "d": {"e", "f"}})
 
 	require.EqualError(t, err, "Use spot.NewSlackNotifier(...) to construct a SlackNotifier")
 }
@@ -137,7 +138,7 @@ func TestNotify_HttpErrorFailure(t *testing.T) {
 	})
 
 	sut.Endpoint = "thisisnotaprotocol://foo"
-	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
+	err := sut.Notify(map[string][]string{"a": {"b,c"}, "d": {"e", "f"}})
 
 	require.EqualError(t, err, "Post thisisnotaprotocol://foo: unsupported protocol scheme \"thisisnotaprotocol\"")
 	require.False(t, called, "Expected no API calls to be made")
@@ -152,7 +153,7 @@ func TestNotify_NonSuccessResponse(t *testing.T) {
 		w.WriteHeader(http.StatusBadRequest)
 	})
 
-	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
+	err := sut.Notify(map[string][]string{"a": {"b,c"}, "d": {"e", "f"}})
 
 	require.EqualError(t, err, "Failed to notify: 400 Bad Request")
 	require.True(t, called, "Expected an API call to be made")
@@ -175,7 +176,7 @@ func TestNotify(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	err := sut.Notify(map[string][]string{"a": []string{"b,c"}, "d": []string{"e", "f"}})
+	err := sut.Notify(map[string][]string{"a": {"b,c"}, "d": {"e", "f"}})
 
 	require.NoError(t, err)
 	require.NotNil(t, payload)
