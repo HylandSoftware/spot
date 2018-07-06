@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"bitbucket.hylandqa.net/do/spot/pkg/spot"
-	"bitbucket.hylandqa.net/do/spot/pkg/spot/bamboo"
-	"bitbucket.hylandqa.net/do/spot/pkg/spot/jenkins"
+	"github.com/hylandsoftware/spot/pkg/spot"
+	"github.com/hylandsoftware/spot/pkg/spot/bamboo"
+	"github.com/hylandsoftware/spot/pkg/spot/jenkins"
 
 	arg "github.com/alexflint/go-arg"
 	colorable "github.com/mattn/go-colorable"

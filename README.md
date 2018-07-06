@@ -81,7 +81,11 @@ INFO[0001] Goodbye
 
 ## License
 
-TBD
+Spot is licensed under the MIT License. See [`LICENSE`](./LICENSE) for details.
+
+Spot makes use of [`dep`](https://github.com/golang/dep) for package management.
+Packages restored by `dep` have their own license which may differ from the terms
+of the MIT license that we use.
 
 [Dog](https://thenounproject.com/term/dog/61386/) logo by `Buena Buena` from
-the Noun Project, licensed under the Creative Commons CCBY License.
+the Noun Project, licensed under the Creative Commons CC BY License.
