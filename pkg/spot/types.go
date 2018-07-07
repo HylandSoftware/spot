@@ -18,7 +18,7 @@ func NewWatchdog(detectors []OfflineAgentDetector, handler Notifier) *Watchdog {
 		Detectors:           detectors,
 		NotificationHandler: handler,
 
-		cache: OfflineAgentCache{},
+		cache: NewInMemoryOfflineAgentCache(),
 	}
 }
 
@@ -78,49 +78,9 @@ type OfflineAgentDetector interface {
 }
 
 // OfflineAgentCache remembers what agents are still offline
-type OfflineAgentCache map[string]map[string]bool
-
-// Update updates the cache and returns a map of systems to agents that are newly offline
-func (c OfflineAgentCache) Update(offline map[string][]string) map[string][]string {
-	result := map[string][]string{}
-
-	for system, agents := range offline {
-		// 1. Make entries for new systems
-		if _, exists := c[system]; !exists {
-			c[system] = map[string]bool{}
-		}
-
-		// 2. Make entries for new agents
-		for _, agent := range agents {
-			if _, exists := c[system][agent]; !exists {
-				c[system][agent] = true
-				result[system] = append(result[system], agent)
-			}
-		}
-
-		// 3. Remove agents not in the offline list
-		for agent := range c[system] {
-			found := false
-			for _, a := range offline[system] {
-				if agent == a {
-					found = true
-				}
-			}
-
-			if !found {
-				delete(c[system], agent)
-			}
-		}
-	}
-
-	// 4. Remove systems with no agents
-	for system := range c {
-		if _, exists := offline[system]; !exists || len(c[system]) == 0 {
-			delete(c, system)
-		}
-	}
-
-	return result
+type OfflineAgentCache interface {
+	// Update updates the cache and returns a map of systems to agents that are newly offline
+	Update(offline map[string][]string) map[string][]string
 }
 
 // Notifier provides a way to warn interested parties about offline agents.
