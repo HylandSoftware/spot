@@ -26,7 +26,7 @@ build-windows: build-prepare
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $(DIST)/$(BINARY_NAME_WINDOWS) -v ./cmd/spot
 
 test:
-	$(GOTEST) -v -cover ./...
+	$(GOTEST) -v -cover -race -coverprofile=./coverage.out ./...
 
 clean:
 	$(GOCLEAN)
