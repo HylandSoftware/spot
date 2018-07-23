@@ -21,12 +21,12 @@ build-prepare:
 build: build-unix build-windows
 
 build-unix: build-prepare
-	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(DIST)/$(BINARY_NAME) -v ./cmd/spot
+	GOOS=linux GOARCH=amd64 $(GOBUILD) -a -o $(DIST)/$(BINARY_NAME) -v ./cmd/spot
 build-windows: build-prepare
-	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $(DIST)/$(BINARY_NAME_WINDOWS) -v ./cmd/spot
+	GOOS=windows GOARCH=amd64 $(GOBUILD) -a -o $(DIST)/$(BINARY_NAME_WINDOWS) -v ./cmd/spot
 
 test:
-	$(GOTEST) -v -cover ./...
+	$(GOTEST) -v -cover -race -coverprofile=./coverage.out ./...
 
 clean:
 	$(GOCLEAN)

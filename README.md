@@ -1,5 +1,7 @@
 # Spot - The Watchdog for your Build Agents
 
+[![Build Status](https://travis-ci.org/HylandSoftware/spot.svg?branch=master)](https://travis-ci.org/HylandSoftware/spot) [![Coverage Status](https://coveralls.io/repos/github/HylandSoftware/spot/badge.svg?branch=master)](https://coveralls.io/github/HylandSoftware/spot?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/hylandsoftware/spot)](https://goreportcard.com/report/github.com/hylandsoftware/spot)
+
 ![spot](./logo.png)
 
 Spot is a watchdog for build agents in Jenkins and Bamboo

@@ -3,9 +3,8 @@ set -euo pipefail
 
 SCRIPT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-docker build "${SCRIPT_ROOT}/../" -f "${SCRIPT_ROOT}/../" -t hylandsoftware/spot
+make
+"${GOPATH}/bin/goveralls" -coverprofile="${SCRIPT_ROOT}/../coverage.out" -service=travis-ci
 
-if [ "${TRAVIS_PULL_REQUEST}" = "false" ] && [ "${TRAVIS_BRANCH}" = "master" ]; then
-    docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}"
-    docker push hylandsoftware/spot 
-fi
+CGO_ENABLED=0 make build-unix
+docker build "${SCRIPT_ROOT}/../" -f "${SCRIPT_ROOT}/Dockerfile" -t hylandsoftware/spot

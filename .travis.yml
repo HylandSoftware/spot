@@ -1,12 +1,14 @@
 sudo: required
 
-language: minimal
+language: go
+go:
+- "1.10"
 
 services:
 - docker
 
 before_install:
-- docker pull golang:1.10
+- go get -u github.com/mattn/goveralls github.com/golang/dep/cmd/dep
 
 script:
 - ./build/travis.sh
