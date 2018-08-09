@@ -7,6 +7,9 @@ go:
 services:
 - docker
 
+install:
+- git fetch origin +refs/heads/*:refs/remotes/origin/*
+
 before_install:
 - go get -u github.com/mattn/goveralls github.com/golang/dep/cmd/dep
 
