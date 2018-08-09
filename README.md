@@ -58,7 +58,7 @@ Options:
 ### Example
 
 ```txt
-$ docker run -it --rm hcr.io/nlowe/spot:latest --jenkins "https://devops.jenkins.hylandqa.net,username,password" --jenkins "https://csp.jenkins.hylandqa.net/" --once --verbosity debug
+$ docker run -it --rm hylandsoftware/spot:latest --jenkins "https://devops.jenkins.hylandqa.net,username,password" --jenkins "https://csp.jenkins.hylandqa.net/" --once --verbosity debug
 INFO[0000] Hello, World!
 DEBU[0000] Trying to parse jenkins instance              jenkins="https://devops.jenkins.hylandqa.net,username,password"
 DEBU[0000] Trying to parse jenkins instance              jenkins="https://csp.jenkins.hylandqa.net/"
