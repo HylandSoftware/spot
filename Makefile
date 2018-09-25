@@ -2,7 +2,7 @@ GOCMD=go
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
-GOGET=$(GOCMD) get
+GOMOD=$(GOCMD) mod
 
 DIST=./dist
 BINARY_NAME=spot
@@ -13,7 +13,7 @@ BINARY_NAME_WINDOWS=$(BINARY_NAME).exe
 all: restore test build
 
 restore:
-	dep ensure
+	$(GOMOD) download
 
 build-prepare:
 	mkdir -p $(DIST)
