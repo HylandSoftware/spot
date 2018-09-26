@@ -10,6 +10,9 @@ env:
 services:
 - docker
 
+before_install:
+- go get -u github.com/mattn/goveralls
+
 install:
 - git fetch origin +refs/heads/*:refs/remotes/origin/*
 
