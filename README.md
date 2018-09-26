@@ -8,8 +8,9 @@ Spot is a watchdog for build agents in Jenkins and Bamboo
 
 ## Building
 
-Spot makes use of [go modules](https://github.com/golang/go/wiki/Modules), meaning you will need `vgo` or `go` 1.11+. The easiest way to build
-is to run `make`, which will generate linux and windows binaries in `dist/`.
+Spot makes use of [go modules](https://github.com/golang/go/wiki/Modules),
+meaning you will need `vgo` or `go` 1.11+. The easiest way to build is to run
+`make`, which will generate linux and windows binaries in `dist/`.
 
 If you don't have `make`, you can build manually:
 
@@ -19,7 +20,7 @@ go mod download
 go build -o dist/spot -v ./cmd/spot
 
 # windows
-go download
+go mod download
 go build -o dist/spot.exe -v ./cmd/spot
 ```
 
