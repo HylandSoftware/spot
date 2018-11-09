@@ -8,18 +8,19 @@ Spot is a watchdog for build agents in Jenkins and Bamboo
 
 ## Building
 
-You need [`dep`](https://github.com/golang/dep). The easiest way to build
-is to run `make`, which will generate linux and windows binaries in `dist/`.
+Spot makes use of [go modules](https://github.com/golang/go/wiki/Modules),
+meaning you will need `vgo` or `go` 1.11+. The easiest way to build is to run
+`make`, which will generate linux and windows binaries in `dist/`.
 
 If you don't have `make`, you can build manually:
 
 ```bash
 # linux
-dep ensure
+go mod download
 go build -o dist/spot -v ./cmd/spot
 
 # windows
-dep ensure
+go mod download
 go build -o dist/spot.exe -v ./cmd/spot
 ```
 
@@ -85,8 +86,8 @@ INFO[0001] Goodbye
 
 Spot is licensed under the MIT License. See [`LICENSE`](./LICENSE) for details.
 
-Spot makes use of [`dep`](https://github.com/golang/dep) for package management.
-Packages restored by `dep` have their own license which may differ from the terms
+Spot makes use of [`go modules`](https://github.com/golang/go/wiki/Modules) for package management.
+Packages restored by `go mod` have their own license which may differ from the terms
 of the MIT license that we use.
 
 [Dog](https://thenounproject.com/term/dog/61386/) logo by `Buena Buena` from
